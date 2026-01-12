@@ -45,20 +45,23 @@ export default function Game() {
   };
 
   // Action: Flip Card
-  const handleFlip = useCallback(() => {
+  const handleFlip = useCallback((isAutoFlip = false) => {
     if (isGameOver) return;
 
     if (isFlipped) {
       // If card is already flipped, we check if player missed a match
       // A match existed (Card == Chant) but player clicked Flip instead of Clap
-      const previousChant = CHANT_SEQUENCE[chantIndex];
-      const isMatch = currentCard === previousChant;
+      // We skip this check if it's an auto-flip after a correct clap
+      if (!isAutoFlip) {
+        const previousChant = CHANT_SEQUENCE[chantIndex];
+        const isMatch = currentCard === previousChant;
 
-      if (isMatch) {
-        showFeedback("miss");
-        setStreak(0);
-        // Maybe small score penalty?
-        setScore(prev => Math.max(0, prev - 50));
+        if (isMatch) {
+          showFeedback("miss");
+          setStreak(0);
+          // Maybe small score penalty?
+          setScore(prev => Math.max(0, prev - 50));
+        }
       }
 
       // Prepare next round
@@ -108,7 +111,7 @@ export default function Game() {
       
       // Auto-flip after success
       setTimeout(() => {
-        handleFlip();
+        handleFlip(true);
       }, 400); // Small delay to see the match feedback
     } else {
       // WRONG!
@@ -145,7 +148,7 @@ export default function Game() {
   // Keyboard controls
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.code === "Space") handleFlip();
+      if (e.code === "Space") handleFlip(false);
       if (e.code === "Enter") handleClap();
     };
     window.addEventListener("keydown", handleKeyDown);
