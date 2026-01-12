@@ -50,14 +50,9 @@ export function GameCard({ type, isFlipped, className }: GameCardProps) {
             
             {/* Content */}
             {config && Icon && (
-              <>
-                <h3 className="text-3xl sm:text-4xl font-black font-display text-white drop-shadow-md mb-4 uppercase tracking-wider">
-                  {config.label}
-                </h3>
-                <div className="bg-white/30 p-6 rounded-full backdrop-blur-sm shadow-inner">
-                  <Icon className="w-20 h-20 sm:w-28 sm:h-28 text-white drop-shadow-md" strokeWidth={2.5} />
-                </div>
-              </>
+              <div className="bg-white/30 p-6 rounded-full backdrop-blur-sm shadow-inner">
+                <Icon className="w-20 h-20 sm:w-28 sm:h-28 text-white drop-shadow-md" strokeWidth={2.5} />
+              </div>
             )}
           </div>
         </div>

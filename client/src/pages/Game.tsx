@@ -106,7 +106,10 @@ export default function Game() {
         });
       }
       
-      // Auto-flip after success? No, let user flip to continue rhythm
+      // Auto-flip after success
+      setTimeout(() => {
+        handleFlip();
+      }, 400); // Small delay to see the match feedback
     } else {
       // WRONG!
       showFeedback("wrong");
