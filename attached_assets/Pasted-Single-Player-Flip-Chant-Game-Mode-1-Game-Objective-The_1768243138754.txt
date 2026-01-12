@@ -1,0 +1,204 @@
+Single-Player “Flip + Chant” Game Mode
+1. Game Objective
+
+The player’s goal is to:
+
+Correctly identify when a spoken/displayed word matches a revealed card
+
+React quickly by pressing CLAP only on correct matches
+
+Build the highest possible score and streak without making mistakes
+
+2. Core Game Elements
+2.1 Words (Chant)
+
+The game uses a repeating sequence of five words, always in the same order:
+
+Taco → Cat → Goat → Cheese → Pizza → (repeat)
+
+Only one word is active at any time.
+
+2.2 Cards
+
+Cards are drawn one at a time from a shuffled deck.
+
+Each card displays one of the same five items:
+
+Taco
+
+Cat
+
+Goat
+
+Cheese
+
+Pizza
+
+Only one card is visible at a time.
+
+2.3 Player Actions
+
+The player has two possible actions:
+
+FLIP – reveal the next card
+
+CLAP – react to a matching word + card
+
+The player may choose to do nothing.
+
+3. Game Flow
+3.1 Start of Game
+
+The game begins with:
+
+Score = 0
+
+Streak = 0
+
+First word in the chant sequence active
+
+A face-down deck is prepared.
+
+3.2 Turn Loop (Core Loop)
+
+Each turn follows this exact sequence:
+
+The current chant word is shown (and optionally spoken).
+
+The player presses FLIP.
+
+The top card is revealed.
+
+The game checks for a match:
+
+Match = revealed card equals current chant word.
+
+The player may press CLAP if they believe a match occurred.
+
+The turn resolves (scoring or penalties).
+
+The chant advances to the next word.
+
+The next turn begins.
+
+4. Match Rules
+4.1 Correct Match
+
+If:
+
+The card matches the chant word
+
+AND the player presses CLAP within the allowed reaction window
+
+Then:
+
+Score increases
+
+Streak increases
+
+Positive feedback is shown (visual and/or sound)
+
+4.2 Missed Match
+
+If:
+
+The card matches the chant word
+
+AND the player does not press CLAP within the reaction window
+
+Then:
+
+Streak is reset to zero
+
+A penalty is applied (e.g. score decrease or no score gain)
+
+Negative feedback is shown
+
+4.3 False Clap
+
+If:
+
+The card does not match the chant word
+
+AND the player presses CLAP
+
+Then:
+
+Streak is reset to zero
+
+A stronger penalty is applied than for a missed match
+
+Clear error feedback is shown
+
+5. Scoring & Progression
+5.1 Score
+
+Score increases only on correct matches.
+
+Score never increases on incorrect actions.
+
+5.2 Streak
+
+Streak increases by 1 for each correct match.
+
+Streak resets to 0 on:
+
+Missed match
+
+False clap
+
+5.3 Difficulty Progression
+
+As score or time increases:
+
+The pace of turns increases
+
+The allowed reaction window becomes shorter
+
+Difficulty progression is smooth and continuous.
+
+6. Feedback Requirements
+6.1 Visual Feedback
+
+The active chant word must always be clearly visible.
+
+The revealed card must be visually distinct.
+
+Correct actions show positive feedback (e.g. glow, shake, checkmark).
+
+Incorrect actions show negative feedback (e.g. red flash, warning icon).
+
+6.2 Audio Feedback (Optional but Recommended)
+
+Chant word may be spoken or sounded.
+
+Correct clap produces a satisfying sound.
+
+Incorrect actions produce a clear error sound.
+
+7. Game End Conditions
+7.1 End of Run
+
+The game ends when:
+
+The player makes too many mistakes in a short period
+OR
+
+A fixed deck is exhausted
+OR
+
+The player manually ends the run
+
+(The exact end condition is configurable but must be clear to the player.)
+
+7.2 End Screen
+
+At the end of a run, the game shows:
+
+Final score
+
+Highest streak achieved
+
+Time survived or cards flipped
+
+Option to restart immediately
