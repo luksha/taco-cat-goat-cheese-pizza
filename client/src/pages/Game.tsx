@@ -1,18 +1,20 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
 import { GameCard, type CardType } from "@/components/GameCard";
 import { FeedbackOverlay, type FeedbackType } from "@/components/FeedbackOverlay";
 import { useSubmitScore } from "@/hooks/use-scores";
 import confetti from "canvas-confetti";
-import { ArrowBigLeft, Hand, RefreshCw } from "lucide-react";
+import { ArrowBigLeft, Hand, RefreshCw, Timer } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 
 // The repeating chant sequence
 const CHANT_SEQUENCE: CardType[] = ["Taco", "Cat", "Goat", "Cheese", "Pizza"];
 const CARD_TYPES: CardType[] = ["Taco", "Cat", "Goat", "Cheese", "Pizza"];
+const TURN_DURATION = 700; // ms
 
 export default function Game() {
   const [, setLocation] = useLocation();
@@ -28,6 +30,9 @@ export default function Game() {
   const [isGameOver, setIsGameOver] = useState(false);
   const [showNameDialog, setShowNameDialog] = useState(false);
   const [username, setUsername] = useState("");
+  
+  // Timer state
+  const [timeLeft, setTimeLeft] = useState(TURN_DURATION);
   
   // Submit Hook
   const submitScore = useSubmitScore();
@@ -50,8 +55,6 @@ export default function Game() {
 
     if (isFlipped) {
       // If card is already flipped, we check if player missed a match
-      // A match existed (Card == Chant) but player clicked Flip instead of Clap
-      // We skip this check if it's an auto-flip after a correct clap
       if (!isAutoFlip) {
         const previousChant = CHANT_SEQUENCE[chantIndex];
         const isMatch = currentCard === previousChant;
@@ -59,7 +62,6 @@ export default function Game() {
         if (isMatch) {
           showFeedback("miss");
           setStreak(0);
-          // Maybe small score penalty?
           setScore(prev => Math.max(0, prev - 50));
         }
       }
@@ -67,18 +69,17 @@ export default function Game() {
       // Prepare next round
       setIsFlipped(false);
       
-      // Short delay to allow flip back animation, then change card content and flip forward
       setTimeout(() => {
-        // Advance Chant
         setChantIndex((prev) => (prev + 1) % CHANT_SEQUENCE.length);
-        // New Card
         setCurrentCard(getRandomCard());
         setIsFlipped(true);
-      }, 150); // Fast transition
+        setTimeLeft(TURN_DURATION);
+      }, 150);
     } else {
       // First flip of the game
       setCurrentCard(getRandomCard());
       setIsFlipped(true);
+      setTimeLeft(TURN_DURATION);
     }
   }, [isFlipped, currentCard, chantIndex, isGameOver]);
 
@@ -112,18 +113,31 @@ export default function Game() {
       // Auto-flip after success
       setTimeout(() => {
         handleFlip(true);
-      }, 400); // Small delay to see the match feedback
+      }, 400); 
     } else {
       // WRONG!
       showFeedback("wrong");
       setStreak(0);
-      setScore(prev => Math.max(0, prev - 100)); // Penalty
-      // End game on mistake? Or just reset? 
-      // Let's implement "3 strikes" or just infinite play with score.
-      // For "High Score" tracking, usually one mistake ends the streak.
-      // Let's keep it arcade style - infinite play until user quits.
+      setScore(prev => Math.max(0, prev - 100));
     }
-  }, [isFlipped, currentCard, chantIndex, streak, isGameOver, maxStreak]);
+  }, [isFlipped, currentCard, chantIndex, streak, isGameOver, maxStreak, handleFlip]);
+
+  // Timer effect
+  useEffect(() => {
+    if (!isFlipped || isGameOver || feedback) return;
+
+    const interval = setInterval(() => {
+      setTimeLeft((prev) => {
+        if (prev <= 0) {
+          handleFlip(true);
+          return TURN_DURATION;
+        }
+        return prev - 10;
+      });
+    }, 10);
+
+    return () => clearInterval(interval);
+  }, [isFlipped, isGameOver, feedback, handleFlip]);
 
   const handleEndGame = () => {
     setIsGameOver(true);
@@ -164,11 +178,20 @@ export default function Game() {
         <Button variant="ghost" size="icon" onClick={() => setLocation("/")}>
           <ArrowBigLeft className="w-8 h-8" />
         </Button>
-        <div className="flex gap-4 sm:gap-8 text-center">
+        <div className="flex gap-4 sm:gap-8 text-center items-center">
           <div className="bg-white/50 backdrop-blur-sm px-4 py-2 rounded-2xl border-2 border-primary/20">
             <div className="text-xs uppercase font-bold text-muted-foreground">Score</div>
             <div className="text-2xl font-black font-display text-primary">{score}</div>
           </div>
+          
+          {/* Timer Progress */}
+          <div className="hidden sm:flex flex-col items-center gap-1 w-32">
+            <div className="flex items-center gap-1 text-xs font-bold text-muted-foreground uppercase">
+              <Timer className="w-3 h-3" /> Time
+            </div>
+            <Progress value={(timeLeft / TURN_DURATION) * 100} className="h-2" />
+          </div>
+
           <div className="bg-white/50 backdrop-blur-sm px-4 py-2 rounded-2xl border-2 border-accent/20">
             <div className="text-xs uppercase font-bold text-muted-foreground">Streak</div>
             <div className="text-2xl font-black font-display text-accent">{streak}</div>
@@ -177,6 +200,11 @@ export default function Game() {
         <Button variant="destructive" size="sm" onClick={handleEndGame}>
           End Game
         </Button>
+      </div>
+
+      {/* Mobile Timer Progress */}
+      <div className="sm:hidden px-6 pt-2">
+        <Progress value={(timeLeft / TURN_DURATION) * 100} className="h-2" />
       </div>
 
       {/* Main Game Area */}
@@ -215,7 +243,7 @@ export default function Game() {
         <div className="w-full max-w-md grid grid-cols-2 gap-4 sm:gap-6 mt-auto mb-8 sm:mb-12">
           <Button 
             variant="default" 
-            onClick={handleFlip} 
+            onClick={() => handleFlip(false)} 
             className="bg-blue-500 hover:bg-blue-600 text-white h-24 sm:h-32 text-2xl sm:text-3xl rounded-3xl border-b-8 border-blue-700 active:border-b-0 active:translate-y-2"
           >
             <div className="flex flex-col items-center gap-2">
