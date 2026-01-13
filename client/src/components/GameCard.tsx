@@ -8,6 +8,7 @@ interface GameCardProps {
   type?: CardType;
   isFlipped: boolean;
   className?: string;
+  onClick?: () => void;
 }
 
 const CardConfig: Record<CardType, { color: string; icon: any; label: string }> = {
@@ -18,12 +19,31 @@ const CardConfig: Record<CardType, { color: string; icon: any; label: string }> 
   Pizza: { color: "bg-red-500", icon: Pizza, label: "Pizza" },
 };
 
-export function GameCard({ type, isFlipped, className }: GameCardProps) {
+export function GameCard({ type, isFlipped, className, onClick }: GameCardProps) {
   const config = type ? CardConfig[type] : null;
   const Icon = config?.icon;
 
   return (
-    <div className={cn("perspective-1000 w-48 h-64 sm:w-64 sm:h-80 cursor-pointer", className)}>
+    <div
+      className={cn(
+        "perspective-1000 w-48 h-64 sm:w-64 sm:h-80 cursor-pointer",
+        className
+      )}
+      onClick={onClick}
+      role={onClick ? "button" : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      onKeyDown={
+        onClick
+          ? (event) => {
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                onClick();
+              }
+            }
+          : undefined
+      }
+      aria-label={onClick ? "Flip card" : undefined}
+    >
       <motion.div
         className="w-full h-full relative transform-style-3d transition-transform duration-300"
         initial={false}
