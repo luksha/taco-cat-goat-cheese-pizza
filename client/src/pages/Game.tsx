@@ -14,7 +14,7 @@ import { Input } from "@/components/ui/input";
 // The repeating chant sequence
 const CHANT_SEQUENCE: CardType[] = ["Taco", "Cat", "Goat", "Cheese", "Pizza"];
 const CARD_TYPES: CardType[] = ["Taco", "Cat", "Goat", "Cheese", "Pizza"];
-const TURN_DURATION = 700; // ms
+const TURN_DURATION = 3000; // ms
 
 export default function Game() {
   const [, setLocation] = useLocation();
