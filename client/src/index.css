@@ -1,12 +1,12 @@
-@import url('https://fonts.googleapis.com/css2?family=Architects+Daughter&family=Outfit:wght@400;500;700;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  --font-display: 'Architects Daughter', cursive;
-  --font-body: 'Outfit', sans-serif;
+  --font-display: 'Nunito', sans-serif;
+  --font-body: 'Nunito', sans-serif;
 
   /* Playful Arcade Palette */
   --background: 260 20% 98%;

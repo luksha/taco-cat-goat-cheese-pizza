@@ -1,7 +1,5 @@
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
-import { Pizza, Cat, Ghost, Disc, Sandwich } from "lucide-react";
-
 export type CardType = "Taco" | "Cat" | "Goat" | "Cheese" | "Pizza";
 
 interface GameCardProps {
@@ -11,17 +9,20 @@ interface GameCardProps {
   onClick?: () => void;
 }
 
-const CardConfig: Record<CardType, { color: string; icon: any; label: string }> = {
-  Taco: { color: "bg-amber-400", icon: Sandwich, label: "Taco" },
-  Cat: { color: "bg-pink-400", icon: Cat, label: "Cat" },
-  Goat: { color: "bg-cyan-400", icon: Ghost, label: "Goat" }, // Ghost looks a bit like a goat? Close enough for arcade!
-  Cheese: { color: "bg-yellow-300", icon: Disc, label: "Cheese" },
-  Pizza: { color: "bg-red-500", icon: Pizza, label: "Pizza" },
+const CardConfig: Record<
+  CardType,
+  { color: string; imageSrc?: string; label: string }
+> = {
+  Taco: { color: "bg-[#dca8cf]", imageSrc: "/images/taco.png", label: "Taco" },
+  Cat: { color: "bg-[#f3eeb3]", imageSrc: "/images/cat.png", label: "Cat" },
+  Goat: { color: "bg-[#b3dde1]", imageSrc: "/images/goat.png", label: "Goat" },
+  Cheese: { color: "bg-[#dca8cf]", imageSrc: "/images/cheese.png", label: "Cheese",},
+  Pizza: { color: "bg-[#e7aaab]", imageSrc: "/images/pizza.png", label: "Pizza" },
 };
 
 export function GameCard({ type, isFlipped, className, onClick }: GameCardProps) {
   const config = type ? CardConfig[type] : null;
-  const Icon = config?.icon;
+  const imageSrc = config?.imageSrc;
 
   return (
     <div
@@ -69,10 +70,12 @@ export function GameCard({ type, isFlipped, className, onClick }: GameCardProps)
             <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle,_rgba(0,0,0,0.2)_2px,_transparent_3px)] bg-[length:12px_12px]"></div>
             
             {/* Content */}
-            {config && Icon && (
-              <div className="bg-white/30 p-6 rounded-full backdrop-blur-sm shadow-inner">
-                <Icon className="w-20 h-20 sm:w-28 sm:h-28 text-white drop-shadow-md" strokeWidth={2.5} />
-              </div>
+            {config && imageSrc && (
+              <img
+                src={imageSrc}
+                alt={config.label}
+                className="w-40 h-40 sm:w-64 sm:h-64 object-contain"
+              />
             )}
           </div>
         </div>
