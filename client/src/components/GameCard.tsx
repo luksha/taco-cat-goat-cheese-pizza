@@ -1,6 +1,8 @@
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
-export type CardType = "Taco" | "Cat" | "Goat" | "Cheese" | "Pizza";
+import { CARD_LABELS, type CardKey, useLanguage } from "@/lib/language";
+
+export type CardType = CardKey;
 
 interface GameCardProps {
   type?: CardType;
@@ -9,20 +11,24 @@ interface GameCardProps {
   onClick?: () => void;
 }
 
-const CardConfig: Record<
-  CardType,
-  { color: string; imageSrc?: string; label: string }
-> = {
-  Taco: { color: "bg-[#dca8cf]", imageSrc: "/images/taco.png", label: "Taco" },
-  Cat: { color: "bg-[#f3eeb3]", imageSrc: "/images/cat.png", label: "Cat" },
-  Goat: { color: "bg-[#b3dde1]", imageSrc: "/images/goat.png", label: "Goat" },
-  Cheese: { color: "bg-[#dca8cf]", imageSrc: "/images/cheese.png", label: "Cheese",},
-  Pizza: { color: "bg-[#e7aaab]", imageSrc: "/images/pizza.png", label: "Pizza" },
+const CardConfig: Record<CardType, { color: string; imageSrc?: string }> = {
+  Taco: { color: "bg-[#dca8cf]", imageSrc: "/images/taco.png" },
+  Cat: { color: "bg-[#f3eeb3]", imageSrc: "/images/cat.png" },
+  Goat: { color: "bg-[#b3dde1]", imageSrc: "/images/goat.png" },
+  Cheese: { color: "bg-[#dca8cf]", imageSrc: "/images/cheese.png" },
+  Pizza: { color: "bg-[#e7aaab]", imageSrc: "/images/pizza.png" },
 };
 
-export function GameCard({ type, isFlipped, className, onClick }: GameCardProps) {
+export function GameCard({
+  type,
+  isFlipped,
+  className,
+  onClick,
+}: GameCardProps) {
   const config = type ? CardConfig[type] : null;
   const imageSrc = config?.imageSrc;
+  const { language } = useLanguage();
+  const label = type ? CARD_LABELS[language][type] : "";
 
   return (
     <div
@@ -73,7 +79,7 @@ export function GameCard({ type, isFlipped, className, onClick }: GameCardProps)
             {config && imageSrc && (
               <img
                 src={imageSrc}
-                alt={config.label}
+                alt={label}
                 className="w-40 h-40 sm:w-64 sm:h-64 object-contain"
               />
             )}

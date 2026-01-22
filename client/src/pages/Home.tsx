@@ -1,11 +1,14 @@
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { useScores } from "@/hooks/use-scores";
+import { CARD_KEYS, CARD_LABELS, LANGUAGE_OPTIONS, useLanguage } from "@/lib/language";
 import { motion } from "framer-motion";
 import { Trophy, Play, Star } from "lucide-react";
 
 export default function Home() {
   const { data: scores, isLoading } = useScores();
+  const { language, setLanguage } = useLanguage();
+  const chantText = CARD_KEYS.map((key) => CARD_LABELS[language][key]).join(" • ");
 
   return (
     <div className="min-h-screen w-full flex flex-col items-center justify-center bg-background p-4 sm:p-8">
@@ -20,8 +23,39 @@ export default function Home() {
           FLIP CHANT
         </h1>
         <p className="text-xl text-muted-foreground font-medium max-w-md mx-auto">
-          Taco • Cat • Goat • Cheese • Pizza
+          {chantText}
         </p>
+      </motion.div>
+
+      {/* Configuration */}
+      <motion.div
+        initial={{ y: 20, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ delay: 0.15 }}
+        className="w-full max-w-md mb-10 bg-card rounded-3xl border-2 border-border shadow-xl overflow-hidden"
+      >
+        <div className="bg-secondary p-3 text-center border-b-2 border-border">
+          <div className="text-sm font-display font-bold text-secondary-foreground tracking-wide">
+            CONFIGURATION
+          </div>
+        </div>
+        <div className="p-4 flex flex-col items-center gap-3">
+          <div className="text-xs uppercase font-bold text-muted-foreground">
+            Language
+          </div>
+          <div className="flex gap-2">
+            {LANGUAGE_OPTIONS.map((option) => (
+              <Button
+                key={option.value}
+                size="sm"
+                variant={language === option.value ? "default" : "secondary"}
+                onClick={() => setLanguage(option.value)}
+              >
+                {option.label}
+              </Button>
+            ))}
+          </div>
+        </div>
       </motion.div>
 
       {/* Main Action */}

@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { GameCard, type CardType } from "@/components/GameCard";
+import { CARD_KEYS, CARD_LABELS, useLanguage } from "@/lib/language";
 import {
   FeedbackOverlay,
   type FeedbackType,
@@ -21,12 +22,13 @@ import {
 import { Input } from "@/components/ui/input";
 
 // The repeating chant sequence
-const CHANT_SEQUENCE: CardType[] = ["Taco", "Cat", "Goat", "Cheese", "Pizza"];
-const CARD_TYPES: CardType[] = ["Taco", "Cat", "Goat", "Cheese", "Pizza"];
-const TURN_DURATION = 3000; // ms
+const CHANT_SEQUENCE: CardType[] = CARD_KEYS;
+const CARD_TYPES: CardType[] = CARD_KEYS;
+const TURN_DURATION = 10000; // ms
 
 export default function Game() {
   const [, setLocation] = useLocation();
+  const { language } = useLanguage();
   const [chantIndex, setChantIndex] = useState(0);
   const [currentCard, setCurrentCard] = useState<CardType | null>(null);
   const [isFlipped, setIsFlipped] = useState(false);
@@ -261,7 +263,7 @@ export default function Game() {
             animate={{ scale: 1, opacity: 1 }}
             className="text-5xl sm:text-7xl font-black font-display text-foreground drop-shadow-lg"
           >
-            {CHANT_SEQUENCE[chantIndex]}
+            {CARD_LABELS[language][CHANT_SEQUENCE[chantIndex]]}
           </motion.div>
         </div>
 
