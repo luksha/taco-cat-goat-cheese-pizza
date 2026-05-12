@@ -1,10 +1,9 @@
 import { WebSocketServer, WebSocket } from "ws";
 import type { Server as HttpServer } from "http";
 import type { ClientMessage, ServerMessage, WsPlayer } from "@shared/ws-types";
-import { CARD_KEYS, TOTAL_ROUNDS } from "@shared/ws-types";
+import { CARD_KEYS, TOTAL_ROUNDS, TURN_DURATION } from "@shared/ws-types";
 
-const TURN_DURATION = 2_000;
-const RESULT_DELAY = 2_000;
+const RESULT_DELAY = 1_500;
 
 interface RoomPlayer extends WsPlayer {
   ws: WebSocket;
@@ -20,7 +19,6 @@ interface Room {
   roundNumber: number;
   scores: Record<string, number>;
   streaks: Record<string, number>;
-  clappers: Set<string>;
   turnTimer: ReturnType<typeof setTimeout> | null;
 }
 
@@ -43,9 +41,7 @@ function generateId(): string {
 }
 
 function send(ws: WebSocket, msg: ServerMessage) {
-  if (ws.readyState === WebSocket.OPEN) {
-    ws.send(JSON.stringify(msg));
-  }
+  if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(msg));
 }
 
 function broadcast(room: Room, msg: ServerMessage, excludeId?: string) {
@@ -66,7 +62,6 @@ function startRound(room: Room) {
   if (room.turnTimer) clearTimeout(room.turnTimer);
   room.phase = "playing";
   room.currentCard = randomCard();
-  room.clappers = new Set();
 
   broadcast(room, {
     type: "round:card",
@@ -81,37 +76,33 @@ function startRound(room: Room) {
 
 function handleTimeout(room: Room) {
   if (room.phase !== "playing") return;
-  const isMatch = room.currentCard === CARD_KEYS[room.chantIndex];
-
-  if (isMatch) {
-    for (const p of room.players) {
-      if (!room.clappers.has(p.id)) {
-        room.scores[p.id] = Math.max(0, (room.scores[p.id] ?? 0) - 50);
-        room.streaks[p.id] = 0;
-      }
-    }
+  // Penalise everyone and move on
+  for (const p of room.players) {
+    room.scores[p.id] = Math.max(0, (room.scores[p.id] ?? 0) - 25);
+    room.streaks[p.id] = 0;
   }
-
-  finishRound(room, null);
+  finishRound(room, null, "timeout", false);
 }
 
-function finishRound(room: Room, winnerId: string | null) {
+function finishRound(
+  room: Room,
+  actorId: string | null,
+  action: "flip" | "clap" | "timeout",
+  correct: boolean,
+) {
+  if (room.phase !== "playing") return;
   room.phase = "roundEnd";
-  if (room.turnTimer) {
-    clearTimeout(room.turnTimer);
-    room.turnTimer = null;
-  }
+  if (room.turnTimer) { clearTimeout(room.turnTimer); room.turnTimer = null; }
 
-  const winner = winnerId ? room.players.find((p) => p.id === winnerId) : null;
+  const actor = actorId ? room.players.find((p) => p.id === actorId) : null;
 
   broadcast(room, {
     type: "round:result",
     roundEnded: true,
-    winnerId,
-    winnerName: winner?.username ?? null,
-    clapPlayerId: winnerId,
-    clapPlayerName: winner?.username ?? null,
-    correct: true,
+    action,
+    actorId,
+    actorName: actor?.username ?? null,
+    correct,
     scores: { ...room.scores },
     streaks: { ...room.streaks },
   });
@@ -121,11 +112,8 @@ function finishRound(room: Room, winnerId: string | null) {
 
   setTimeout(() => {
     if (!rooms.has(room.code)) return;
-    if (room.roundNumber > TOTAL_ROUNDS) {
-      endGame(room);
-    } else {
-      startRound(room);
-    }
+    if (room.roundNumber > TOTAL_ROUNDS) endGame(room);
+    else startRound(room);
   }, RESULT_DELAY);
 }
 
@@ -135,26 +123,15 @@ function endGame(room: Room) {
 
   const winnerId =
     Object.entries(room.scores).sort(([, a], [, b]) => b - a)[0]?.[0] ??
-    room.players[0]?.id ??
-    "";
+    room.players[0]?.id ?? "";
 
-  broadcast(room, {
-    type: "game:over",
-    scores: room.scores,
-    players: publicPlayers(room),
-    winnerId,
-  });
-
+  broadcast(room, { type: "game:over", scores: room.scores, players: publicPlayers(room), winnerId });
   setTimeout(() => rooms.delete(room.code), 60_000);
 }
 
 function handleMessage(ws: WebSocket, raw: string) {
   let msg: ClientMessage;
-  try {
-    msg = JSON.parse(raw);
-  } catch {
-    return;
-  }
+  try { msg = JSON.parse(raw); } catch { return; }
 
   const meta = wsToPlayer.get(ws);
 
@@ -162,65 +139,30 @@ function handleMessage(ws: WebSocket, raw: string) {
     const code = generateCode();
     const playerId = generateId();
     const room: Room = {
-      code,
-      hostId: playerId,
-      phase: "lobby",
+      code, hostId: playerId, phase: "lobby",
       players: [{ id: playerId, username: msg.username, ws }],
-      chantIndex: 0,
-      currentCard: null,
-      roundNumber: 1,
-      scores: { [playerId]: 0 },
-      streaks: { [playerId]: 0 },
-      clappers: new Set(),
-      turnTimer: null,
+      chantIndex: 0, currentCard: null, roundNumber: 1,
+      scores: { [playerId]: 0 }, streaks: { [playerId]: 0 }, turnTimer: null,
     };
     rooms.set(code, room);
     wsToPlayer.set(ws, { playerId, roomCode: code });
-
-    send(ws, {
-      type: "room:joined",
-      code,
-      playerId,
-      players: publicPlayers(room),
-      isHost: true,
-    });
+    send(ws, { type: "room:joined", code, playerId, players: publicPlayers(room), isHost: true });
     return;
   }
 
   if (msg.type === "room:join") {
     const room = rooms.get(msg.code.toUpperCase());
-    if (!room) {
-      send(ws, { type: "error", message: "Room not found" });
-      return;
-    }
-    if (room.phase !== "lobby") {
-      send(ws, { type: "error", message: "Game already started" });
-      return;
-    }
-    if (room.players.length >= 4) {
-      send(ws, { type: "error", message: "Room is full" });
-      return;
-    }
+    if (!room) { send(ws, { type: "error", message: "Room not found" }); return; }
+    if (room.phase !== "lobby") { send(ws, { type: "error", message: "Game already started" }); return; }
+    if (room.players.length >= 4) { send(ws, { type: "error", message: "Room is full" }); return; }
 
     const playerId = generateId();
     room.players.push({ id: playerId, username: msg.username, ws });
     room.scores[playerId] = 0;
     room.streaks[playerId] = 0;
     wsToPlayer.set(ws, { playerId, roomCode: room.code });
-
-    send(ws, {
-      type: "room:joined",
-      code: room.code,
-      playerId,
-      players: publicPlayers(room),
-      isHost: false,
-    });
-
-    broadcast(room, {
-      type: "room:updated",
-      players: publicPlayers(room),
-      hostId: room.hostId,
-    }, playerId);
+    send(ws, { type: "room:joined", code: room.code, playerId, players: publicPlayers(room), isHost: false });
+    broadcast(room, { type: "room:updated", players: publicPlayers(room), hostId: room.hostId }, playerId);
     return;
   }
 
@@ -233,46 +175,32 @@ function handleMessage(ws: WebSocket, raw: string) {
       send(ws, { type: "error", message: "Cannot start game" });
       return;
     }
-
-    broadcast(room, {
-      type: "game:started",
-      chantIndex: 0,
-      roundNumber: 1,
-      totalRounds: TOTAL_ROUNDS,
-    });
-
+    broadcast(room, { type: "game:started", chantIndex: 0, roundNumber: 1, totalRounds: TOTAL_ROUNDS });
     setTimeout(() => startRound(room), 1_500);
     return;
   }
 
+  if (msg.type === "player:flip") {
+    if (room.phase !== "playing") return;
+    // First to flip gets +50, round ends
+    room.scores[meta.playerId] = (room.scores[meta.playerId] ?? 0) + 50;
+    finishRound(room, meta.playerId, "flip", false);
+    return;
+  }
+
   if (msg.type === "player:clap") {
-    if (room.phase !== "playing" || room.clappers.has(meta.playerId)) return;
-    room.clappers.add(meta.playerId);
-
+    if (room.phase !== "playing") return;
     const isMatch = room.currentCard === CARD_KEYS[room.chantIndex];
-    const player = room.players.find((p) => p.id === meta.playerId)!;
-
     if (isMatch) {
       const streak = room.streaks[meta.playerId] ?? 0;
       const bonus = Math.floor(streak / 5) * 50;
       room.scores[meta.playerId] = (room.scores[meta.playerId] ?? 0) + 100 + bonus;
       room.streaks[meta.playerId] = streak + 1;
-      finishRound(room, meta.playerId);
+      finishRound(room, meta.playerId, "clap", true);
     } else {
       room.scores[meta.playerId] = Math.max(0, (room.scores[meta.playerId] ?? 0) - 50);
       room.streaks[meta.playerId] = 0;
-
-      broadcast(room, {
-        type: "round:result",
-        roundEnded: false,
-        winnerId: null,
-        winnerName: null,
-        clapPlayerId: meta.playerId,
-        clapPlayerName: player.username,
-        correct: false,
-        scores: { ...room.scores },
-        streaks: { ...room.streaks },
-      });
+      finishRound(room, meta.playerId, "clap", false);
     }
     return;
   }
@@ -287,16 +215,13 @@ function handleDisconnect(ws: WebSocket) {
   if (!room) return;
 
   room.players = room.players.filter((p) => p.id !== meta.playerId);
-
   if (room.players.length === 0) {
     if (room.turnTimer) clearTimeout(room.turnTimer);
     rooms.delete(room.code);
     return;
   }
 
-  if (room.hostId === meta.playerId) {
-    room.hostId = room.players[0].id;
-  }
+  if (room.hostId === meta.playerId) room.hostId = room.players[0].id;
 
   if (room.phase === "playing" && room.players.length < 2) {
     if (room.turnTimer) clearTimeout(room.turnTimer);
@@ -304,11 +229,7 @@ function handleDisconnect(ws: WebSocket) {
     return;
   }
 
-  broadcast(room, {
-    type: "room:updated",
-    players: publicPlayers(room),
-    hostId: room.hostId,
-  });
+  broadcast(room, { type: "room:updated", players: publicPlayers(room), hostId: room.hostId });
 }
 
 export function setupWebSocket(httpServer: HttpServer) {

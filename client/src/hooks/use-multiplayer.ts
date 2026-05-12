@@ -5,10 +5,9 @@ export type GamePhase = "idle" | "lobby" | "starting" | "playing" | "roundEnd" |
 
 export interface RoundResult {
   roundEnded: boolean;
-  winnerId: string | null;
-  winnerName: string | null;
-  clapPlayerId: string | null;
-  clapPlayerName: string | null;
+  action: "flip" | "clap" | "timeout";
+  actorId: string | null;
+  actorName: string | null;
   correct: boolean;
   scores: Record<string, number>;
   streaks: Record<string, number>;
@@ -62,10 +61,7 @@ export function useMultiplayer() {
 
   const connect = useCallback((): Promise<void> => {
     return new Promise((resolve, reject) => {
-      if (wsRef.current?.readyState === WebSocket.OPEN) {
-        resolve();
-        return;
-      }
+      if (wsRef.current?.readyState === WebSocket.OPEN) { resolve(); return; }
 
       const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
       const ws = new WebSocket(`${protocol}//${window.location.host}/ws`);
@@ -76,11 +72,7 @@ export function useMultiplayer() {
 
       ws.onmessage = (event) => {
         let msg: ServerMessage;
-        try {
-          msg = JSON.parse(event.data);
-        } catch {
-          return;
-        }
+        try { msg = JSON.parse(event.data); } catch { return; }
 
         setState((prev) => {
           switch (msg.type) {
@@ -92,7 +84,7 @@ export function useMultiplayer() {
                 isHost: msg.isHost,
                 roomCode: msg.code,
                 players: msg.players,
-                hostId: msg.isHost ? msg.playerId : (prev.hostId ?? null),
+                hostId: msg.isHost ? msg.playerId : prev.hostId,
                 error: null,
               };
 
@@ -134,10 +126,9 @@ export function useMultiplayer() {
                 streaks: msg.streaks,
                 lastResult: {
                   roundEnded: msg.roundEnded,
-                  winnerId: msg.winnerId,
-                  winnerName: msg.winnerName,
-                  clapPlayerId: msg.clapPlayerId,
-                  clapPlayerName: msg.clapPlayerName,
+                  action: msg.action,
+                  actorId: msg.actorId,
+                  actorName: msg.actorName,
                   correct: msg.correct,
                   scores: msg.scores,
                   streaks: msg.streaks,
@@ -169,29 +160,19 @@ export function useMultiplayer() {
     });
   }, []);
 
-  const createRoom = useCallback(
-    async (username: string) => {
-      await connect();
-      sendMsg({ type: "room:create", username });
-    },
-    [connect, sendMsg],
-  );
+  const createRoom = useCallback(async (username: string) => {
+    await connect();
+    sendMsg({ type: "room:create", username });
+  }, [connect, sendMsg]);
 
-  const joinRoom = useCallback(
-    async (code: string, username: string) => {
-      await connect();
-      sendMsg({ type: "room:join", code, username });
-    },
-    [connect, sendMsg],
-  );
+  const joinRoom = useCallback(async (code: string, username: string) => {
+    await connect();
+    sendMsg({ type: "room:join", code, username });
+  }, [connect, sendMsg]);
 
-  const startGame = useCallback(() => {
-    sendMsg({ type: "game:start" });
-  }, [sendMsg]);
-
-  const clap = useCallback(() => {
-    sendMsg({ type: "player:clap" });
-  }, [sendMsg]);
+  const startGame = useCallback(() => sendMsg({ type: "game:start" }), [sendMsg]);
+  const flip = useCallback(() => sendMsg({ type: "player:flip" }), [sendMsg]);
+  const clap = useCallback(() => sendMsg({ type: "player:clap" }), [sendMsg]);
 
   const reset = useCallback(() => {
     wsRef.current?.close();
@@ -199,11 +180,7 @@ export function useMultiplayer() {
     setState(INITIAL_STATE);
   }, []);
 
-  useEffect(() => {
-    return () => {
-      wsRef.current?.close();
-    };
-  }, []);
+  useEffect(() => { return () => { wsRef.current?.close(); }; }, []);
 
-  return { state, createRoom, joinRoom, startGame, clap, reset };
+  return { state, createRoom, joinRoom, startGame, flip, clap, reset };
 }

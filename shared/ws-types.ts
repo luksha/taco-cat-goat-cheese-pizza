@@ -1,6 +1,7 @@
 export type CardKey = "Taco" | "Cat" | "Goat" | "Cheese" | "Pizza";
 export const CARD_KEYS: CardKey[] = ["Taco", "Cat", "Goat", "Cheese", "Pizza"];
 export const TOTAL_ROUNDS = 10;
+export const TURN_DURATION = 3_000; // ms per card
 
 export interface WsPlayer {
   id: string;
@@ -11,6 +12,7 @@ export type ClientMessage =
   | { type: "room:create"; username: string }
   | { type: "room:join"; code: string; username: string }
   | { type: "game:start" }
+  | { type: "player:flip" }
   | { type: "player:clap" };
 
 export type ServerMessage =
@@ -21,10 +23,9 @@ export type ServerMessage =
   | {
       type: "round:result";
       roundEnded: boolean;
-      winnerId: string | null;
-      winnerName: string | null;
-      clapPlayerId: string | null;
-      clapPlayerName: string | null;
+      action: "flip" | "clap" | "timeout";
+      actorId: string | null;
+      actorName: string | null;
       correct: boolean;
       scores: Record<string, number>;
       streaks: Record<string, number>;
