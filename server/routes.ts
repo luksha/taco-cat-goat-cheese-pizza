@@ -9,8 +9,12 @@ export async function registerRoutes(
   app: Express
 ): Promise<Server> {
   app.get(api.scores.list.path, async (req, res) => {
-    const scores = await storage.getHighScores();
-    res.json(scores);
+    try {
+      const scores = await storage.getHighScores();
+      res.json(scores);
+    } catch {
+      res.json([]);
+    }
   });
 
   app.post(api.scores.create.path, async (req, res) => {
@@ -25,7 +29,7 @@ export async function registerRoutes(
           field: err.errors[0].path.join('.'),
         });
       }
-      throw err;
+      res.status(503).json({ message: "Score could not be saved" });
     }
   });
 

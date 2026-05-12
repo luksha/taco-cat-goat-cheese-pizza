@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { useScores } from "@/hooks/use-scores";
 import { CARD_KEYS, CARD_LABELS, LANGUAGE_OPTIONS, useLanguage } from "@/lib/language";
 import { motion } from "framer-motion";
-import { Trophy, Play, Star } from "lucide-react";
+import { Trophy, Play, Star, Users } from "lucide-react";
 
 export default function Home() {
   const { data: scores, isLoading } = useScores();
@@ -58,17 +58,23 @@ export default function Home() {
         </div>
       </motion.div>
 
-      {/* Main Action */}
+      {/* Main Actions */}
       <motion.div
         initial={{ scale: 0.8, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         transition={{ delay: 0.2, type: "spring" }}
-        className="mb-16"
+        className="mb-16 flex flex-col sm:flex-row gap-4 items-center"
       >
         <Link href="/game">
           <Button size="lg" className="text-2xl h-20 px-12 rounded-full shadow-[0_10px_0_0_rgba(0,0,0,0.2)] hover:shadow-[0_6px_0_0_rgba(0,0,0,0.2)] active:shadow-none bg-gradient-to-r from-pink-500 to-orange-500 border-4 border-white/20">
             <Play className="mr-3 w-8 h-8 fill-current" />
-            START GAME
+            SOLO
+          </Button>
+        </Link>
+        <Link href="/multiplayer">
+          <Button size="lg" variant="secondary" className="text-2xl h-20 px-10 rounded-full shadow-[0_10px_0_0_rgba(0,0,0,0.15)] hover:shadow-[0_6px_0_0_rgba(0,0,0,0.15)] active:shadow-none border-4 border-white/20">
+            <Users className="mr-3 w-8 h-8" />
+            VS FRIENDS
           </Button>
         </Link>
       </motion.div>
